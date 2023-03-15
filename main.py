@@ -1,3 +1,4 @@
+import logging
 import random
 import math
 
@@ -17,7 +18,8 @@ def LeakEntropy(kmi, receiver, sender):
         Sum = 0.0
         for sent in range(0, len(kmi)):
             t = kmi[sent][receive] * Send[sent] / Receive[receive]
-            Sum += t * math.log2(t)
+            if t != 0:
+                Sum += t * math.log2(t)
         H -= Sum * Receive[receive]
     return round(H, 4)
 
@@ -29,7 +31,10 @@ def NoiseEntropy(kmi, reality):
     for sent in range(0, len(kmi)):
         Sum = 0
         for receive in range(0, len(kmi[sent])):
-            Sum += kmi[sent][receive] * math.log2(kmi[sent][receive])
+            if kmi[sent][receive] != 0:
+                Sum += kmi[sent][receive] * math.log2(kmi[sent][receive])
+            else:
+                continue
         H -= Sum * Reality[sent]
     return round(H, 4)
 
@@ -65,10 +70,27 @@ def MessageReceive(KMI, ProbToSend):
     return Received
 
 
+# Функция поиска значения внутри списка
+def FindElem(elem, array):
+    for i in range(0, len(array)):
+        if array[i] == elem:
+            return i
+    return len(array) + 1
+
+
+# Для нахождения суммы по строке (для апостериорной КМИ)
+def RowSum(array):
+    Sum = 0
+    for i in range(0, len(array)):
+        Sum += array[i]
+    return Sum
+
+
 # Моделирование отправки сообщения.
 def MessageGenerate(symbols, p):
     K = 300  # Размер пакета из символов
     t0 = 0.3  # Время передачи одного разряда
+    KMI = [[0] * (len(symbols) + 1) for i in range(len(symbols))]  # Матрица размером N x N + 1
     SymbolProb = {  # Словарь содержит символ и его вероятность. Логика следующая:
         # Если символ входит в промежуток между a и b - сгенерирован символ a.
         'a': 0.1888,
@@ -90,6 +112,9 @@ def MessageGenerate(symbols, p):
         "t": 0.0,
         "l": 0.0,
     }
+    Symb = list(symbols.keys())  # Для удобной индексации
+    Codes = list(symbols.values())
+    # print(KMI)
     for i in range(0, K):
         Rand = round(random.random(), 4)
         if SymbolProb["a"] > Rand:
@@ -108,9 +133,37 @@ def MessageGenerate(symbols, p):
             Reality["t"] += 1
         if SymbolProb["t"] < Rand < SymbolProb["l"]:
             Reality["l"] += 1
+    index_i = 0
     for x in Reality:
-        Reality[x] = round(Reality[x] / 300.0, 5)
-    return Reality
+        for i in range(0, int(Reality[x])):
+            SymbolCode = symbols[x]
+            result = ""
+            for j in range(0, len(SymbolCode)):
+                rand = round(random.random(), 3)
+                if SymbolCode[j] == "0" and rand <= 0.66:
+                    result += "0"
+                elif SymbolCode[j] == "0" and rand > 0.67:
+                    result += "1"
+                elif SymbolCode[j] == "1" and rand <= 0.65:
+                    result += "1"
+                elif SymbolCode[j] == "1" and rand > 0.66:
+                    result += "0"
+            # print(result)  # До данного момента всё работает исправно
+            if result in Codes:
+                KMI[index_i][FindElem(result, Codes)] += 1
+            else:
+
+                KMI[index_i][len(symbols)] += 1
+        index_i += 1
+    for x in Reality:
+        Reality[x] /= 300.0
+    for i in range(0, len(KMI)):
+        Sum = RowSum(KMI[i])
+        for j in range(0, len(KMI[i])):
+            KMI[i][j] /= float(Sum)
+            KMI[i][j] = round(KMI[i][j], 3)
+    # print(KMI)
+    return Reality, KMI
 
 
 # Функция суммы по строке для нахождения последнего элемента в строке КМИ.
@@ -177,6 +230,16 @@ def FindKMO(kmi, reality, symbols):
     return KMO
 
 
+def PrintKMI(kmi, symbols):
+    syms = list(symbols.keys())
+    codes = list(symbols.values())
+    for i in range(0, len(kmi)):
+        print(f"{syms[i]} \t{codes[i]} ", end="\t")
+        for j in range(0, len(kmi[i])):
+            print(f"{round(kmi[i][j], 4):1.4f}  ", end=" ")
+        print()
+
+
 def main():
     # Словарь для хранения символа и его кодовой последовательности.
     dictionary = {
@@ -199,9 +262,12 @@ def main():
     }
     Reality = {}
     # Нахождение КМИ
-    print(8 * "\t" + " Канальная матрица источника")  # Питон может всё...
-    KMI = FindMatrix(dictionary, inv)
-    Reality = MessageGenerate(dictionary, inv)  # Генератор входных сообщений
+    print(8 * "\t" + " АПРИОРНАЯ Канальная матрица источника")  # Питон может всё...
+    AprKMI = FindMatrix(dictionary, inv)
+    # Нахождение апостериорной КМИ
+    Reality, KMI = MessageGenerate(dictionary, inv)  # Генератор входных сообщений
+    print(8 * "\t" + " АПОСТЕРИОРНАЯ Канальная матрица источника")
+    PrintKMI(KMI, dictionary)
     print("\t\t Апостериорные вероятности входных сообщений ")
     for x in Reality:
         print(f"{x} : {Reality[x]:1.5f}")
