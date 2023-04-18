@@ -44,11 +44,29 @@ def BasisMatrix(array):
             return array
 
 
+# Сложение сообщения и вектора по модулю 2
+def AdditionMessageAndVector(u, E):
+    result = []
+    for i in range(0, len(u)):
+        if E[i] == '1':
+            result.append((int(E[i]) + int(u[i])) % 2)
+        else:
+            result.append(u[i])
+    return result
+
+
 def MultiplyMessageAndMatrix(m, G):
+    """
+    print(m)
+    print("(*)")
+    print(G)
+    print("==")
+    """
     ArrayR = []
     counter = 0
     for i in range(0, len(G)):
         for j in range(0, len(G[0])):
+            #print(f"M = {m[j]} G[{i}][{j}] = {G[i][j]}")
             if m[j] == G[i][j] == '1':
                 counter += 1
         if counter % 2 == 0:
@@ -56,8 +74,7 @@ def MultiplyMessageAndMatrix(m, G):
         else:
             ArrayR.append('1')
         counter = 0
-    print(ArrayR)
-
+    return ArrayR
 
 
 def HammingCode(k, r):
@@ -95,17 +112,60 @@ def HammingCode(k, r):
     Column = [['1', '0', '0', '0'], ['0', '1', '0', '0'], ['0', '0', '1', '0'], ['0', '0', '0', '1']]
     for i in range(0, (k + r)):
         if (i + 1) in [1, 2, 4, 8, 16, 32]:
-            strG.append(transposedP1[iterator]) # Если позиция есть степень двойки, то добавляем.
+            strG.append(transposedP1[iterator])  # Если позиция есть степень двойки, то добавляем.
             iterator += 1
         else:
             strG.append(Column[iterator_j])
             iterator_j += 1
+    G = TranspositionMatrix(strG)
     # Построение матрицы G закончено.
     # Мы работали сначала со строками, потом матрицу транспонировали, получили необходимую G как в лекциях.
+    # Вернём все необходимые данные в основную программу и теперь,
+    # после всех предварительных работ, можем шифровать и дешифровать.
+    return H, G, strG
+
+
+def Encrypt(m, strG, H):
     # Чтобы получить зашифрованное сообщение u необходимо воспользоваться формулой:
     # u = m * G, где m - исходное сообщение, G - матрица, построенная выше.
-    MultiplyMessageAndMatrix("0011", strG)
+    u = MultiplyMessageAndMatrix(m, strG)
+    # Если тестировать комбинацию 1010 из лекции, то всё сходится. u = 1011010.
+    print(f"Исходное сообщение: {m} || Закодированное сообщение: {ConvertToString(u)}")
 
+
+def Decrypt(u, H):
+    syndrome = MultiplyMessageAndMatrix(u, H)
+    u1 = u
+    if '1' in syndrome:
+        print("Найдена ошибка. Попробуем исправить")
+        E = FindVector(syndrome, u)
+        u1 = AdditionMessageAndVector(u, E)
+    m = []
+    for i in range(0, len(u1)):
+        if i + 1not in [1, 2, 4, 8, 16]:
+            m.append(u1[i])
+    print(f"Закодированное сообщение: {u} || Синдром: {syndrome} || Исправленное сообщение: {u1}"
+          f" || Исходное сообщение: {ConvertToString(m)}")
+
+
+# Находит вектор ошибки.
+def FindVector(syndrome, u):
+    res = ConvertToString(syndrome)
+    mistake = int(res, 2)
+    E = []
+    for i in range(0, len(u) - 1):
+        if i + 1 == mistake:
+            E.append('1')
+        E.append('0')
+    print(f"Вектор ошибки E: {E}")
+    return E
+
+
+def ConvertToString(array):
+    result = ""
+    for i in range(0, len(array)):
+        result += str(array[i])
+    return result
 
 
 def main():
@@ -129,7 +189,32 @@ def main():
     }
     K = len(list(dictionary.values())[0])  # Получение числа K.
     R = math.ceil(math.log2(1 + K))  # Поскольку программа должна исправлять только однократные ошибки.
-    HammingCode(K, R)
+    H, G, strG = HammingCode(K, R)
+    print("\t\tКОДИРОВАНИЕ ИСХОДНОГО СЛОВАРЯ:")
+    for key in dictionary:
+        Encrypt(dictionary[key], strG, H)
+    # Decrypt("1011110", H)
+    print("\n\n")
+    Answer = '1'
+    while Answer != '0':
+        print("Выберите действие. \n"
+              "1 - Кодирование \n"
+              "2 - Декодирование \n"
+              "0 - Завершить выполнение программы")
+        Answer = input()
+        if Answer == '1':
+            print("Введите кодовую последовательность, которую хотите закодировать:")
+            Code = input()
+            Encrypt(Code, strG, H)
+        elif Answer == '2':
+            print("Введите закодированную последовательность, которую нужно раскодировать:")
+            Coded = input()
+            Decrypt(Coded, H)
+        else:
+            print("Неизвестное действие")
+
+
+
 
 
 # Точка входа в основную программу
