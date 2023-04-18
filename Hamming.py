@@ -23,8 +23,25 @@ def MatrixRightRotate(matrix):
         for i in range(len(matrix) - 1, -1, -1):
             Helper.append(matrix[i][j])
         NewMatrix.append(Helper)
-    print(NewMatrix)
     return NewMatrix
+
+
+# Транспонирование матрицы (мне всё же удобно работать со строками, нежели со столбцами)
+def TranspositionMatrix(matrixToTranspose):
+    # Как же я люблю питон за генераторы
+    Transposed = [[0 for j in range(len(matrixToTranspose))] for i in range(len(matrixToTranspose[0]))]
+    for i in range(0, len(matrixToTranspose)):
+        for j in range(0, len(matrixToTranspose[0])):
+            Transposed[j][i] = matrixToTranspose[i][j]
+    return Transposed
+
+
+# Создает столбцы матрицы базиса. Меняет единицу с последующим нулём до конца.
+def BasisMatrix(array):
+    for i in range(0, len(array)):
+        if array[i] == '1' and i != len(array) - 1:
+            array[i], array[i + 1] = array[i + 1], array[i]
+            return array
 
 
 def HammingCode(k, r):
@@ -49,11 +66,27 @@ def HammingCode(k, r):
     # На данном этапе у нас есть проверочная подматрица P.
     # Повернем ее на 90 градусов.
     P1 = MatrixRightRotate(P)
-    # Матрица повернута. Переходим к шагу
+    # Матрица повернута. Переходим к шагу создания матрицы G.
+    """
+    Ставим столбцы P’ на разряды с номерами, равными степеням двойки. 
+    Остальные заполняем единичной матрицей. Получаем матрицу G. 
+    """
+    transposedP1 = TranspositionMatrix(P1)
+    strG = []
+    iterator = 0
+    iterator_j = 0
+    # TODO: Пофиксить костыльность кода при создании G
+    Column = [['1', '0', '0', '0'], ['0', '1', '0', '0'], ['0', '0', '1', '0'], ['0', '0', '0', '1']]
+    for i in range(0, (k + r)):
+        if (i + 1) in [1, 2, 4, 8, 16, 32]:
+            strG.append(transposedP1[iterator]) # Если позиция есть степень двойки, то добавляем.
+            iterator += 1
+        else:
+            strG.append(Column[iterator_j])
+            iterator_j += 1
+    # Построение матрицы G закончено.
+    # Мы работали сначала со строками, потом матрицу транспонировали, получили необходимую G как в лекциях.
 
-
-def MatrixCode():
-    ...
 
 
 def main():
