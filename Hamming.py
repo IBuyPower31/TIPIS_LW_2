@@ -44,6 +44,22 @@ def BasisMatrix(array):
             return array
 
 
+def MultiplyMessageAndMatrix(m, G):
+    ArrayR = []
+    counter = 0
+    for i in range(0, len(G)):
+        for j in range(0, len(G[0])):
+            if m[j] == G[i][j] == '1':
+                counter += 1
+        if counter % 2 == 0:
+            ArrayR.append('0')
+        else:
+            ArrayR.append('1')
+        counter = 0
+    print(ArrayR)
+
+
+
 def HammingCode(k, r):
     H = [[0] * (k + r) for i in range(r)]
     List = []
@@ -86,6 +102,9 @@ def HammingCode(k, r):
             iterator_j += 1
     # Построение матрицы G закончено.
     # Мы работали сначала со строками, потом матрицу транспонировали, получили необходимую G как в лекциях.
+    # Чтобы получить зашифрованное сообщение u необходимо воспользоваться формулой:
+    # u = m * G, где m - исходное сообщение, G - матрица, построенная выше.
+    MultiplyMessageAndMatrix("0011", strG)
 
 
 
