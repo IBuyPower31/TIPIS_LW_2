@@ -1,5 +1,17 @@
 import random
 import math
+import Hamming
+
+
+def CodedCharacteristic():
+    K = 4
+    R = 3
+    F = R / (R + K)
+    D0 = 1 - math.pow(2, -R)
+    Dispr = math.pow(2, -K)
+    print(f"Коэффициент избыточности кода: {F}")
+    print(f"Доля обнаруживаемых ошибок: {D0}")
+    print(f"Доля исправляемых ошибок: {Dispr}")
 
 
 # Скорость передачи информации
@@ -42,7 +54,8 @@ def NoiseEntropy(kmi, reality):
 def Entropy(reality):
     H = 0.0
     for x in reality:
-        H += reality[x] * math.log2(reality[x])
+        if reality[x] != 0:
+            H += reality[x] * math.log2(reality[x])
     return round(-H, 4)
 
 
@@ -114,6 +127,9 @@ def MessageGenerate(symbols, p):
     Symb = list(symbols.keys())  # Для удобной индексации
     Codes = list(symbols.values())
     # print(KMI)
+    K1 = 4
+    R = math.ceil(math.log2(1 + K1))  # Поскольку программа должна исправлять только однократные ошибки.
+    H, G, strG = Hamming.HammingCode(K1, R)
     for i in range(0, K):
         Rand = round(random.random(), 4)
         if SymbolProb["a"] > Rand:
@@ -133,33 +149,43 @@ def MessageGenerate(symbols, p):
         if SymbolProb["t"] < Rand < SymbolProb["l"]:
             Reality["l"] += 1
     index_i = 0
+    #print(Reality)
     for x in Reality:
         for i in range(0, int(Reality[x])):
             SymbolCode = symbols[x]
+            # print(f"Отправлено: {SymbolCode}")
+            CodedSymbol = Hamming.Encrypt(SymbolCode, strG, H)
+            # print(f"Закодировано: {SymbolCode1}")
             result = ""
-            for j in range(0, len(SymbolCode)):
+            for j in range(0, len(CodedSymbol)):
                 rand = round(random.random(), 3)
-                if SymbolCode[j] == "0" and rand <= 0.58:
-                    result += "0"
-                elif SymbolCode[j] == "0" and rand > 0.58:
-                    result += "1"
-                elif SymbolCode[j] == "1" and rand <= 0.67:
-                    result += "1"
-                elif SymbolCode[j] == "1" and rand > 0.67:
-                    result += "0"
+                if CodedSymbol[j] == "0":
+                    if rand <= 0.66:
+                        result += "0"
+                    else:
+                        result += "1"
+                if CodedSymbol[j] == "1":
+                    if rand <= 0.65:
+                        result += "1"
+                    else:
+                        result += "0"
+            res = Hamming.Decrypt(result, H)
+            print(f"Получено: {Hamming.ConvertToString(res)}")
+            stringResult = Hamming.ConvertToString(res)
             # print(result)  # До данного момента всё работает исправно
-            if result in Codes:
-                KMI[index_i][FindElem(result, Codes)] += 1
+            if stringResult in Codes:
+                KMI[index_i][Codes.index(stringResult)] += 1
             else:
-
                 KMI[index_i][len(symbols)] += 1
         index_i += 1
     for x in Reality:
         Reality[x] /= 300.0
     for i in range(0, len(KMI)):
         Sum = RowSum(KMI[i])
+        print(Sum)
         for j in range(0, len(KMI[i])):
-            KMI[i][j] /= float(Sum)
+            if Sum != 0:
+                KMI[i][j] /= float(Sum)
             KMI[i][j] = round(KMI[i][j], 3)
     # print(KMI)
     return Reality, KMI
@@ -172,40 +198,6 @@ def SumOfRow(matrix, index):
         Sum += i
     print(round((1 - Sum), 4), end="")
     matrix[index][8] = round((1 - Sum), 4)
-
-
-# Функция, которая выводит КМИ и записывает ее в матрицу.
-def FindMatrix(symbols, p):
-    KMI = [[0] * (len(symbols) + 1) for i in range(len(symbols))]
-    """
-    Канальная матрица источника. Первые 8 элементов в строке — вероятности
-    перехода в известные символы. Последний элемент - в неизвестный.
-    len(symbols) + 1 - учитывает все наши символы алфавита + неизвестные переходы.
-    len(symbols) - количество строк в матрице.
-    """
-    result = 1
-    print("   \t\t\t\t", end=" ")  # Быстрое и эффективное начало строки :)
-    for x in symbols:
-        print(f"{x:9}", end="")
-    print("?", end="")
-    print()
-    index_i = 0
-    index_j = 0
-    for x in symbols:  # Пробег по словарю
-        print(str(x) + " \t " + str(symbols[x]) + "  ", end=" ")  # Чтобы было понятно, какой символ и где стоит.
-        index_j = 0
-        for y in symbols:  # Каждый элемент с каждым
-            for i in range(0, 4):  # Начало сравнения
-                key = symbols[x][i] + symbols[y][i]  # Создаем ключ перехода.
-                result *= p.get(key)  # Получаем по ключу значение. 00 - ноль перешел в ноль. Умножаем на результат.
-            print(f"{round(result, 4):1.4f}  ", end=" ")  # Форматированный вывод
-            KMI[index_i][index_j] = round(result, 4)
-            result = 1  # Для следующих подсчетов.
-            index_j += 1  # Увеличиваем индекс по строке.
-        SumOfRow(KMI, index_i)  # Получаем значение последнего элемента. Из свойств КМИ, сумма по строке равна 1.
-        index_i += 1  # Увеличиваем индекс по столбцу.
-        print()
-    return KMI
 
 
 def FindKMO(kmi, reality, symbols):
@@ -243,13 +235,13 @@ def main():
     # Словарь для хранения символа и его кодовой последовательности.
     dictionary = {
         'a': "0001",
-        'b': "0010",
-        "c": "0011",
-        "d": "0100",
-        "e": "0101",
-        "f": "0110",
-        "g": "0111",
-        "h": "1000",
+        'e': "0010",
+        "i": "0011",
+        "o": "0100",
+        "n": "0101",
+        "r": "0110",
+        "t": "0111",
+        "l": "1000",
 
     }
     # Словарь для хранения вероятностей перехода. Первый символ - был, второй - перешел.
@@ -290,6 +282,7 @@ def main():
     print(f"Скорость передачи информации: {InformationTransfer(t, round(ReceiverEntropy - Noise, 4))}")
     print(8 * "\t" + " Канальная матрица объединения")  # Питон может всё...
     KMO = FindKMO(KMI, Reality, dictionary)
+    CodedCharacteristic()
 
 
 # Точка входа в основную программу

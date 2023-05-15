@@ -64,9 +64,10 @@ def MultiplyMessageAndMatrix(m, G):
     """
     ArrayR = []
     counter = 0
+    #print(f"m: {m} || G: {G}")
     for i in range(0, len(G)):
         for j in range(0, len(G[0])):
-            #print(f"M = {m[j]} G[{i}][{j}] = {G[i][j]}")
+           #print(f"M = {m[j]} G[{i}][{j}] = {G[i][j]}")
             if m[j] == G[i][j] == '1':
                 counter += 1
         if counter % 2 == 0:
@@ -130,22 +131,24 @@ def Encrypt(m, strG, H):
     # u = m * G, где m - исходное сообщение, G - матрица, построенная выше.
     u = MultiplyMessageAndMatrix(m, strG)
     # Если тестировать комбинацию 1010 из лекции, то всё сходится. u = 1011010.
-    print(f"Исходное сообщение: {m} || Закодированное сообщение: {ConvertToString(u)}")
+    # print(f"Исходное сообщение: {m} || Закодированное сообщение: {ConvertToString(u)}")
+    return u
 
 
 def Decrypt(u, H):
     syndrome = MultiplyMessageAndMatrix(u, H)
     u1 = u
     if '1' in syndrome:
-        print("Найдена ошибка. Попробуем исправить")
+        # print("Найдена ошибка. Попробуем исправить")
         E = FindVector(syndrome, u)
         u1 = AdditionMessageAndVector(u, E)
     m = []
     for i in range(0, len(u1)):
-        if i + 1not in [1, 2, 4, 8, 16]:
+        if i + 1 not in [1, 2, 4, 8, 16]:
             m.append(u1[i])
-    print(f"Закодированное сообщение: {u} || Синдром: {syndrome} || Исправленное сообщение: {u1}"
-          f" || Исходное сообщение: {ConvertToString(m)}")
+    # print(f"Закодированное сообщение: {u} || Синдром: {syndrome} || Исправленное сообщение: {u1}"
+    #      f" || Исходное сообщение: {ConvertToString(m)}")
+    return m
 
 
 # Находит вектор ошибки.
@@ -153,11 +156,12 @@ def FindVector(syndrome, u):
     res = ConvertToString(syndrome)
     mistake = int(res, 2)
     E = []
-    for i in range(0, len(u) - 1):
+    for i in range(0, len(u)):
         if i + 1 == mistake:
             E.append('1')
-        E.append('0')
-    print(f"Вектор ошибки E: {E}")
+        else:
+            E.append('0')
+    #print(f"Вектор ошибки E: {E}")
     return E
 
 
@@ -167,7 +171,7 @@ def ConvertToString(array):
         result += str(array[i])
     return result
 
-
+"""
 def main():
     # Словарь для хранения символа и его кодовой последовательности.
     dictionary = {
@@ -214,9 +218,6 @@ def main():
             print("Неизвестное действие")
 
 
-
-
-
 # Точка входа в основную программу
-main()
-
+#main()
+"""
